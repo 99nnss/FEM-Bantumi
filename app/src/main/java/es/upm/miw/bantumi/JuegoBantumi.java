@@ -2,6 +2,8 @@ package es.upm.miw.bantumi;
 
 import android.util.Log;
 
+import java.util.Scanner;
+
 import es.upm.miw.bantumi.model.BantumiViewModel;
 
 public class JuegoBantumi {
@@ -192,8 +194,21 @@ public class JuegoBantumi {
      * @return juego serializado
      */
     public String serializa() {
-        // @TODO
-        return null;
+        StringBuilder serializedGame = new StringBuilder();
+
+        // Serializa el turno actual
+        serializedGame.append(turnoActual().name()).append("\n");
+
+        // Serializa el número inicial de semillas
+        serializedGame.append(numInicialSemillas).append("\n");
+
+        // Serializa el estado de todas las posiciones del tablero
+        for (int i = 0; i < NUM_POSICIONES; i++) {
+            serializedGame.append(getSemillas(i)).append(" ");
+        }
+        serializedGame.append("\n");
+
+        return serializedGame.toString();
     }
 
     /**
@@ -202,6 +217,21 @@ public class JuegoBantumi {
      * @param juegoSerializado cadena que representa el estado completo del juego
      */
     public void deserializa(String juegoSerializado) {
-        // @TODO
+        Scanner scanner = new Scanner(juegoSerializado);
+
+        // Deserializa el turno actual
+        String turnoStr = scanner.next();
+        Turno turno = Turno.valueOf(turnoStr);
+
+        // Deserializa el número inicial de semillas
+        int numInicialSemillas = scanner.nextInt();
+
+        // Deserializa el estado de todas las posiciones del tablero
+        for (int i = 0; i < NUM_POSICIONES; i++) {
+            setSemillas(i, scanner.nextInt());
+        }
+
+        // Establece el turno y notifica a los observadores
+        setTurno(turno);
     }
 }

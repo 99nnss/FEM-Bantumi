@@ -1,6 +1,8 @@
 package es.upm.miw.bantumi;
 
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -15,6 +17,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.material.snackbar.Snackbar;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Locale;
 
 import es.upm.miw.bantumi.model.BantumiViewModel;
@@ -25,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     JuegoBantumi juegoBantumi;
     BantumiViewModel bantumiVM;
     int numInicialSemillas;
+    private boolean partidaModificada = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,6 +127,17 @@ public class MainActivity extends AppCompatActivity {
 //            case R.id.opcAjustes: // @todo Preferencias
 //                startActivity(new Intent(this, BantumiPrefs.class));
 //                return true;
+            case R.id.opcGuardarPartida:
+                guardarPartida();
+                return true;
+            case R.id.opcReiniciarPartida:
+                mostrarRestartDialog();
+                return true;
+            case R.id.opcRecuperarPartida:
+                // Recuperar la partida
+                mostrarRestoreDialog();
+
+                return true;
             case R.id.opcAcercaDe:
                 new AlertDialog.Builder(this)
                         .setTitle(R.string.aboutTitle)
@@ -139,6 +158,77 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+    public void cargarPartidaGuardada() {
+        // Verifica si hay una partida guardada previamente
+        String partidaGuardada = leerPartidaGuardadaDesdeArchivo();
+
+        if (partidaGuardada != null && !partidaGuardada.isEmpty()) {
+            // Si se encuentra una partida guardada, deserializa y carga el juego
+            juegoBantumi.deserializa(partidaGuardada);
+
+            // Actualiza la vista para reflejar el juego cargado
+            actualizarVistaSegunJuego();
+
+            // Restablece la bandera de partida modificada
+            partidaModificada = false;
+        }
+    }
+
+    private void actualizarVistaSegunJuego() {
+        // Actualiza la vista para reflejar el turno actual
+        marcarTurno(juegoBantumi.turnoActual());
+
+        // Actualiza la representación de las semillas en el tablero
+        for (int i = 0; i < JuegoBantumi.NUM_POSICIONES; i++) {
+            mostrarValor(i, juegoBantumi.getSemillas(i));
+        }
+    }
+
+    private String leerPartidaGuardadaDesdeArchivo() {
+        String partidaGuardada = null;
+        try {
+            FileInputStream fileInputStream = openFileInput("partida_guardada.txt");
+            InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            partidaGuardada = sb.toString();
+        } catch (IOException e) {
+            // Maneja errores al leer el archivo
+            e.printStackTrace();
+        }
+        return partidaGuardada;
+    }
+
+
+    public void reiniciarJuego() {
+        // limpiar tablero
+        for (int i = 0; i < JuegoBantumi.NUM_POSICIONES; i++) {
+            juegoBantumi.setSemillas(i, 0);
+        }
+
+        juegoBantumi.inicializar(JuegoBantumi.Turno.turnoJ1);
+
+        marcarTurno(JuegoBantumi.Turno.turnoJ1);
+        for (int i = 0; i < JuegoBantumi.NUM_POSICIONES; i++) {
+            mostrarValor(i, juegoBantumi.getSemillas(i));
+        }
+    }
+    private void mostrarRestartDialog() {
+        RestartAlertDialog restartDialog = new RestartAlertDialog();
+        restartDialog.show(getSupportFragmentManager(), "RESTART_DIALOG");
+
+    }
+
+    private void mostrarRestoreDialog() {
+        RestoreAlertDialog RestoreAlertDialog = new RestoreAlertDialog();
+        RestoreAlertDialog.show(getSupportFragmentManager(), "RESTORE_DIALOG");
+
+    }
+
     /**
      * Acción que se ejecuta al pulsar sobre cualquier hueco
      *
@@ -148,16 +238,20 @@ public class MainActivity extends AppCompatActivity {
         String resourceName = getResources().getResourceEntryName(v.getId()); // pXY
         int num = Integer.parseInt(resourceName.substring(resourceName.length() - 2));
         Log.i(LOG_TAG, "huecoPulsado(" + resourceName + ") num=" + num);
+
         switch (juegoBantumi.turnoActual()) {
             case turnoJ1:
                 juegoBantumi.jugar(num);
+                partidaModificada = true; // Marcar partida como modificada
                 break;
             case turnoJ2:
                 juegaComputador();
+                partidaModificada = true; // Marcar partida como modificada
                 break;
-            default:    // JUEGO TERMINADO
+            default: // JUEGO TERMINADO
                 finJuego();
         }
+
         if (juegoBantumi.juegoTerminado()) {
             finJuego();
         }
@@ -201,4 +295,28 @@ public class MainActivity extends AppCompatActivity {
         // terminar
         new FinalAlertDialog().show(getSupportFragmentManager(), "ALERT_DIALOG");
     }
+
+    private void guardarPartida() {
+        String juegoSerializado = juegoBantumi.serializa();
+
+        // 保存游戏状态到文件
+        try {
+            FileOutputStream fos = openFileOutput("partida_guardada.txt", Context.MODE_PRIVATE);
+            fos.write(juegoSerializado.getBytes());
+            fos.close();
+            Snackbar.make(
+                    findViewById(android.R.id.content),
+                    "Partida guardada exitosamente",
+                    Snackbar.LENGTH_SHORT
+            ).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Snackbar.make(
+                    findViewById(android.R.id.content),
+                    "Error al guardar la partida",
+                    Snackbar.LENGTH_SHORT
+            ).show();
+        }
+    }
+
 }
