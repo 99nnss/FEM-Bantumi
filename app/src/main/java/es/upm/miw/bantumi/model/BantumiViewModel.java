@@ -14,6 +14,7 @@ public class BantumiViewModel extends ViewModel {
     private ArrayList<MutableLiveData<Integer>> tablero;
 
     private MutableLiveData<JuegoBantumi.Turno> turno;
+    private MutableLiveData<Integer> puntuacionFinal = new MutableLiveData<>(0);
 
     public BantumiViewModel() {
         turno = new MutableLiveData<>(JuegoBantumi.Turno.turnoJ1);
@@ -65,4 +66,13 @@ public class BantumiViewModel extends ViewModel {
         }
         tablero.get(pos).setValue(v);
     }
+
+    public LiveData<Integer> getPuntuacionFinal() {
+        return puntuacionFinal;
+    }
+
+    public void setPuntuacionFinal(int puntuacion) {
+        puntuacionFinal.setValue(puntuacion);
+    }
+
 }

@@ -2,7 +2,6 @@ package es.upm.miw.bantumi;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -10,10 +9,12 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.room.Room;
 
 import com.google.android.material.snackbar.Snackbar;
 
@@ -23,8 +24,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Locale;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import es.upm.miw.bantumi.model.BantumiViewModel;
+import es.upm.miw.bantumi.model.ResultEntity;
+import es.upm.miw.bantumi.model.ResultRoomDatabase;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -33,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     BantumiViewModel bantumiVM;
     int numInicialSemillas;
     private boolean partidaModificada = false;
+    private ResultRoomDatabase resultRoomDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
         numInicialSemillas = getResources().getInteger(R.integer.intNumInicialSemillas);
         bantumiVM = new ViewModelProvider(this).get(BantumiViewModel.class);
         juegoBantumi = new JuegoBantumi(bantumiVM, JuegoBantumi.Turno.turnoJ1, numInicialSemillas);
+        resultRoomDatabase = ResultRoomDatabase.getDatabase(this);
         crearObservadores();
     }
 
@@ -122,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
         return true;
     }
 
+
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()) {
 //            case R.id.opcAjustes: // @todo Preferencias
@@ -136,7 +144,6 @@ public class MainActivity extends AppCompatActivity {
             case R.id.opcRecuperarPartida:
                 // Recuperar la partida
                 mostrarRestoreDialog();
-
                 return true;
             case R.id.opcAcercaDe:
                 new AlertDialog.Builder(this)
@@ -277,6 +284,9 @@ public class MainActivity extends AppCompatActivity {
      * El juego ha terminado. Volver a jugar?
      */
     private void finJuego() {
+        int puntuacionJugador1 = juegoBantumi.getSemillas(6);
+        int puntuacionJugador2 = juegoBantumi.getSemillas(13);
+
         String texto = (juegoBantumi.getSemillas(6) > 6 * numInicialSemillas)
                 ? "Gana Jugador 1"
                 : "Gana Jugador 2";
@@ -284,22 +294,53 @@ public class MainActivity extends AppCompatActivity {
             texto = "¡¡¡ EMPATE !!!";
         }
         Snackbar.make(
+                        findViewById(android.R.id.content),
+                        texto,
+                        Snackbar.LENGTH_LONG
+                )
+                .show();
+
+        guardarPuntuaciones(puntuacionJugador1, puntuacionJugador2);
+
+        Snackbar.make(
                 findViewById(android.R.id.content),
-                texto,
+                "Se ha guardado el resultado",
                 Snackbar.LENGTH_LONG
-        )
-        .show();
+        ).show();
 
-        // @TODO guardar puntuación
-
-        // terminar
+        // 结束游戏
         new FinalAlertDialog().show(getSupportFragmentManager(), "ALERT_DIALOG");
+    }
+
+    public void guardarPuntuaciones(int puntuacionJugador1, int puntuacionJugador2) {
+
+        if (ResultRoomDatabase.databaseWriteExecutor != null) {
+            Log.d("Database", "ResultRoomDatabase is not null");
+            ResultEntity resultado = new ResultEntity(1, "Jugador 1", "Jugador 2", getCurrentDateTime(), puntuacionJugador1, puntuacionJugador2);
+            ResultRoomDatabase.databaseWriteExecutor.execute(() -> {
+                resultRoomDatabase.resultDao().insertResult(resultado);
+            });
+        } else {
+            Log.e("Database", "ResultRoomDatabase is null");
+        }
+    }
+
+    private String getCurrentDateTime() {
+        String formato = "yyyy-MM-dd HH:mm:ss";
+
+        // Obtén la fecha y hora actual
+        Date fechaHoraActual = new Date();
+
+        // Crea un objeto SimpleDateFormat con el formato deseado
+        SimpleDateFormat sdf = new SimpleDateFormat(formato);
+
+        // Formatea la fecha y hora actual según el formato
+        return sdf.format(fechaHoraActual);
     }
 
     private void guardarPartida() {
         String juegoSerializado = juegoBantumi.serializa();
 
-        // 保存游戏状态到文件
         try {
             FileOutputStream fos = openFileOutput("partida_guardada.txt", Context.MODE_PRIVATE);
             fos.write(juegoSerializado.getBytes());

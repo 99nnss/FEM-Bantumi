@@ -234,4 +234,18 @@ public class JuegoBantumi {
         // Establece el turno y notifica a los observadores
         setTurno(turno);
     }
+
+    public int obtenerPuntuacionActual() {
+        int puntuacionJugador1 = getSemillas(6);
+        int puntuacionJugador2 = getSemillas(13);
+
+        for (int i = 0; i < 6; i++) {
+            puntuacionJugador1 += getSemillas(i);
+            puntuacionJugador2 += getSemillas(i + 7);
+        }
+
+        return (turnoActual() == Turno.turnoJ1) ? puntuacionJugador1 : puntuacionJugador2;
+    }
+
+
 }
