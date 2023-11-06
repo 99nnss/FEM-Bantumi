@@ -30,7 +30,7 @@ public class ResultEntity {
 
     // Constructor, getters y setters
 
-    public ResultEntity(Integer id, String nombreJugador1, String nombreJugador2, String fecha, int puntuacionAlmacen1, int puntuacionAlmacen2) {
+    public ResultEntity(String nombreJugador1, String nombreJugador2, String fecha, int puntuacionAlmacen1, int puntuacionAlmacen2) {
         this.id = id;
         this.nombreJugador1 = nombreJugador1;
         this.nombreJugador2 = nombreJugador2;

@@ -316,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (ResultRoomDatabase.databaseWriteExecutor != null) {
             Log.d("Database", "ResultRoomDatabase is not null");
-            ResultEntity resultado = new ResultEntity(1, "Jugador 1", "Jugador 2", getCurrentDateTime(), puntuacionJugador1, puntuacionJugador2);
+            ResultEntity resultado = new ResultEntity("Jugador 1", "Jugador 2", getCurrentDateTime(), puntuacionJugador1, puntuacionJugador2);
             ResultRoomDatabase.databaseWriteExecutor.execute(() -> {
                 resultRoomDatabase.resultDao().insertResult(resultado);
             });
